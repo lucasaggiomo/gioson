@@ -32,10 +32,17 @@ char *fread_all(const char *pathname);
         fprintf(stream, fmt, ##__VA_ARGS__);           \
     } while (0)
 
-#define error(fmt, ...)                                             \
-    do {                                                            \
-        log(LOG_ERROR, "%s:%d" fmt, __FILE__, __LINE__, ##__VA_ARGS__); \
-        exit(1);                                                    \
+#define error(fmt, ...)                                                   \
+    do {                                                                  \
+        log(LOG_ERROR, "%s:%d: " fmt, __FILE__, __LINE__, ##__VA_ARGS__); \
+        exit(1);                                                          \
+    } while (0)
+
+#define p_error(fmt, ...)                                                 \
+    do {                                                                  \
+        log(LOG_ERROR, "%s:%d: " fmt, __FILE__, __LINE__, ##__VA_ARGS__); \
+        perror("Error");                                                  \
+        exit(1);                                                          \
     } while (0)
 
 #define require(expr, fmt, ...)    \
@@ -43,6 +50,13 @@ char *fread_all(const char *pathname);
         if ((expr))                \
             break;                 \
         error(fmt, ##__VA_ARGS__); \
+    } while (0)
+
+#define p_require(expr, fmt, ...)    \
+    do {                             \
+        if ((expr))                  \
+            break;                   \
+        p_error(fmt, ##__VA_ARGS__); \
     } while (0)
 
 #define unsupported(fmt, ...) \

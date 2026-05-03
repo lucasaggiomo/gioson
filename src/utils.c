@@ -40,6 +40,7 @@ char *fread_all(const char *pathname) {
     // doesn't check errors for the sake of simplicity
 
     FILE *f = fopen(pathname, "rb");
+    p_require(f, "Error opening file '%s'\n", pathname);
 
     // gets size of file
     fseek(f, 0, SEEK_END);
