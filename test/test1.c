@@ -5,8 +5,7 @@
 #include <unistd.h>
 
 #include "da.h"
-#include "lexer.h"
-#include "parser.h"
+#include "gioson.h"
 #include "strings.h"
 #include "utils.h"
 
@@ -60,16 +59,29 @@ int main(int argc, char *argv[]) {
     log(LOG_DEBUG, "Current log kind set to %s\n", log_kind_name[CURRENT_LOG_KIND]);
 
     // opens itself
-    char *s = fread_all(jsonpath);
+    char *filecontent = fread_all(jsonpath);
 
-    String_View sv = SV(s);
+    String_View sv = SV(filecontent);
     Json_Node *node = json_parse(&sv);
 
     json_print(node, 0);
 
+    // navigazione albero
+    Type_Kind type = json_get_type(node);
+
+    require(type == TYPE_OBJECT, "Expected object type\n");
+    Json_Node *key1_value = json_object_get(node, "key1");
+    json_acquire(key1_value);
     json_release(node);
 
-    free(s);
+    // now key1_value should not have been deallocated
+    require(json_get_type(key1_value) == TYPE_STRING, "Expected string type\n");
+    String_View key1_content = json_get_string(key1_value);
+    printf("key1 value is: " SV_FORMAT "\n", SV_ARGS(&key1_content));
+
+    json_release(key1_value);
+
+    free(filecontent);
 
     if (isatty(STDOUT_FILENO))
         printf("\n");

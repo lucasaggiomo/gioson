@@ -1,100 +1,10 @@
-#include "parser.h"
-
 #include "lexer.h"
 #include "utils.h"
+#include "node.h"
 
 #include "da.h"
-
 #include <stdlib.h>
 #include <string.h>
-
-/* ------------------------------- Private Functions ------------------------------- */
-
-#define print_indent(indent)               \
-    do {                                   \
-        for (int i = 0; i < indent; i++) { \
-            printf("\t");                  \
-        }                                  \
-    } while (0)
-
-static void free_node(Json_Node *node) {
-    if (!node)
-        return;
-
-    log(LOG_DEBUG, "Freeing node %p (kind %d)\n", node, node->kind);
-
-    switch (node->kind) {
-        case TYPE_OBJECT:
-            // frees all subobjects
-            for (size_t i = 0; i < node->data.object.count; i++) {
-                Json_Kvp kvp = node->data.object.items[i];
-                free_node(kvp.value);
-            }
-            da_free(&(node->data.object));
-            break;
-
-        case TYPE_ARRAY:
-            // frees all items
-            da_foreach(&node->data.array, free_node);
-            da_free(&node->data.object);
-            break;
-
-        case TYPE_STRING:
-        case TYPE_NUMBER:
-        case TYPE_BOOLEAN:
-        case TYPE_NULL:
-        default:
-            break;
-    }
-
-    free(node);
-}
-
-static Json_Node *new_node(Type_Kind kind) {
-    Json_Node *node = json_malloc(sizeof(*node));
-    node->kind = kind;
-    node->refcount = 1;
-
-    log(LOG_DEBUG, "Allocating new node %p (kind %d)\n", node, kind);
-
-    return node;
-}
-
-static Json_Node *new_string(String_View *str) {
-    Json_Node *node = new_node(TYPE_STRING);
-    node->data.str = *str;     // copies String_View
-    return node;
-}
-
-static Json_Node *new_number(double number) {
-    Json_Node *node = new_node(TYPE_NUMBER);
-    node->data.num = number;
-    return node;
-}
-
-static Json_Node *new_boolean(int boolean) {
-    Json_Node *node = new_node(TYPE_BOOLEAN);
-    node->data.boolean = (boolean == 1);
-    return node;
-}
-
-static Json_Node *new_null() {
-    Json_Node *node = new_node(TYPE_NULL);
-    memset(&(node->data), 0, sizeof(node->data));     // in teoria è inutile
-    return node;
-}
-
-static Json_Node *new_object() {
-    Json_Node *node = new_node(TYPE_OBJECT);
-    da_init(&(node->data.object));
-    return node;
-}
-
-static Json_Node *new_array() {
-    Json_Node *node = new_node(TYPE_ARRAY);
-    da_init(&(node->data.array));
-    return node;
-}
 
 /** `{ something }`
  * parses next tokens to find 'something'
@@ -187,88 +97,6 @@ static Json_Node *parse_array(String_View *json) {
     return arr;
 }
 
-static void json_recursive_print(Json_Node *node, int indent) {
-    if (!node)
-        return;
-
-    printf("[%d] ", node->refcount);
-    switch (node->kind) {
-        case TYPE_STRING:
-            printf("\"" SV_FORMAT "\"", SV_ARGS(&node->data.str));
-            break;
-
-        case TYPE_NUMBER:
-            printf("%g", node->data.num);
-            break;
-
-        case TYPE_BOOLEAN:
-            printf("%s", node->data.boolean ? "true" : "false");
-            break;
-
-        case TYPE_NULL:
-            printf("null");
-            break;
-
-        case TYPE_OBJECT:
-            printf("{");
-            if (!da_empty(&node->data.object)) {
-                printf("\n");
-                for (size_t i = 0; i < node->data.object.count; i++) {
-                    Json_Kvp kvp = node->data.object.items[i];
-
-                    print_indent(indent + 1);
-
-                    printf("\"" SV_FORMAT "\": ", SV_ARGS(&kvp.key));
-                    json_recursive_print(kvp.value, indent + 1);
-
-                    if (i < node->data.object.count - 1)
-                        printf(",");
-                    printf("\n");
-                }
-                print_indent(indent);
-            }
-            printf("}");
-            break;
-
-        case TYPE_ARRAY:
-            printf("[");
-            if (!da_empty(&node->data.array)) {
-                printf("\n");
-                for (size_t i = 0; i < node->data.array.count; i++) {
-                    Json_Node *item = node->data.array.items[i];
-
-                    print_indent(indent + 1);
-                    json_recursive_print(item, indent + 1);
-                    if (i < node->data.array.count - 1)
-                        printf(",");
-                    printf("\n");
-                }
-                print_indent(indent);
-            }
-            printf("]");
-            break;
-    }
-}
-
-void json_acquire(Json_Node *node) {
-    if (node == NULL)
-        error("Tried to acquire NULL node");
-
-    node->refcount++;
-}
-
-node_status json_release(Json_Node *node) {
-    if (node == NULL)
-        error("Tried to release NULL node");
-
-    node->refcount--;
-    if (node->refcount == 0) {
-        free_node(node);
-        return FREED;
-    }
-    return NOT_FREED;
-}
-
 /* =============================== PARSER =============================== */
 
 /** Il nodo restituito ha valore refcount 1. */
@@ -308,9 +136,3 @@ Json_Node *json_parse(String_View *json) {
             error("Expected a JSON object, array or literal, but found token of kind %d\n", tok.kind);
     }
 }
-
-void json_print(Json_Node *node, int indent) {
-    json_recursive_print(node, indent);
-    printf("\n");
-}
-

@@ -26,6 +26,8 @@ typedef struct {
 #define SV_ARGS(sv) (int)(sv)->count, (sv)->data
 
 #define SV_EMPTY(sv) ((sv)->count == 0)
+#define SV_EQUALS(sv1, sv2) (sv_strcmp((sv1), (sv2)) == 0)
+#define SV_EQUALS_CSTR(sv, cstr) (sv_strcmp_cstr((sv), (cstr)) == 0)
 
 String_View sv_chop_left(String_View *sv, size_t num);
 String_View sv_chop_right(String_View *sv, size_t num);
