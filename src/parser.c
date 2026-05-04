@@ -1,5 +1,5 @@
 #include "lexer.h"
-#include "utils.h"
+#include "log.h"
 #include "node.h"
 
 #include "da.h"

@@ -3,7 +3,7 @@ TEST = test/test1.c
 JSON = test/test.json
 
 # stupid Makefile just to make life easier
-build/$(EXE): ./src
+build/$(EXE): ./src/**
 	@mkdir -p $(@D)
 	gcc -Wall -Wextra -g -Isrc ./src/*.c $(TEST) -o ./build/$(EXE)
 

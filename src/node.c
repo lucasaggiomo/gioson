@@ -1,7 +1,7 @@
 #include "node.h"
 
 #include "da.h"
-#include "utils.h"
+#include "log.h"
 
 #include "gioson.h"
 #include <stdlib.h>
@@ -87,7 +87,7 @@ static void free_node(Json_Node *node) {
     if (!node)
         return;
 
-    log(LOG_DEBUG, "Freeing node %p (kind %d)\n", node, node->kind);
+    log_debug("Freeing node %p (kind %d)\n", node, node->kind);
 
     switch (node->kind) {
         case TYPE_OBJECT:
@@ -120,7 +120,7 @@ static Json_Node *new_node(Type_Kind kind) {
     node->kind = kind;
     node->refcount = 1;
 
-    log(LOG_DEBUG, "Allocating new node %p (kind %d)\n", node, kind);
+    log_debug("Allocating new node %p (kind %d)\n", node, kind);
 
     return node;
 }
@@ -170,7 +170,7 @@ void json_print(Json_Node *node, int indent) {
 
 void json_acquire(Json_Node *node) {
     if (!node) {
-        log(LOG_WARNING, "Tried to acquire NULL node");
+        log_warning("Tried to acquire NULL node");
         return;
     }
 
@@ -179,12 +179,12 @@ void json_acquire(Json_Node *node) {
 
 void json_release(Json_Node *node) {
     if (!node) {
-        log(LOG_WARNING, "Tried to release NULL node");
+        log_warning("Tried to release NULL node");
         return;
     }
 
     if (node->refcount == 0) {
-        log(LOG_WARNING, "Tried to release a node with refcount 0");
+        log_warning("Tried to release a node with refcount 0");
         return;
     }
 

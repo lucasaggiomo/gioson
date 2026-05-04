@@ -6,6 +6,7 @@
 
 #include "da.h"
 #include "gioson.h"
+#include "log.h"
 #include "strings.h"
 #include "utils.h"
 
@@ -51,12 +52,12 @@ int main(int argc, char *argv[]) {
     char *jsonpath = shift_args(&argc, &argv);
     require(jsonpath, "\nUsage: %s\n\t<json-path>\n\t[<log-level among {DEBUG, INFO, ERROR}, default %s>]\n", program, log_kind_name[LOG_DEFAULT_KIND]);
 
-    log(LOG_INFO, "Opening file %s\n", jsonpath);
+    log_info("Opening file %s\n", jsonpath);
 
     char *log_kind = shift_args(&argc, &argv);
     CURRENT_LOG_KIND = log_kind_from_name(log_kind, LOG_DEFAULT_KIND);
 
-    log(LOG_DEBUG, "Current log kind set to %s\n", log_kind_name[CURRENT_LOG_KIND]);
+    log_debug("Current log kind set to %s\n", log_kind_name[CURRENT_LOG_KIND]);
 
     // opens itself
     char *filecontent = fread_all(jsonpath);
