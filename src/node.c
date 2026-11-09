@@ -95,13 +95,13 @@ static void free_node(Json_Node *node) {
             da_foreach(Json_Kvp, kvp, &node->data.object) {
                 json_release(kvp->value);
             }
-            da_free(&(node->data.object));
+            da_deinit(&node->data.object);
             break;
 
         case TYPE_ARRAY:
             // releases all items
             da_apply(&node->data.array, json_release);
-            da_free(&node->data.object);
+            da_deinit(&node->data.object);
             break;
 
         case TYPE_STRING:

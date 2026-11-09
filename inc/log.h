@@ -1,5 +1,5 @@
-#ifndef _LOG_H_
-#define _LOG_H_
+#ifndef LOG_H
+#define LOG_H
 
 #include <stdarg.h>
 #include <stdio.h>
@@ -31,7 +31,7 @@ extern Log_Kind CURRENT_LOG_KIND;
     static inline void log_##name(const char *fmt, ...) { \
         if (LOG_KIND(NAME) < CURRENT_LOG_KIND)            \
             return;                                       \
-        fprintf(stream, "[" #name "] ");                  \
+        fprintf(stream, "[" LOG_KIND_STR(name) "] ");     \
                                                           \
         va_list args;                                     \
         va_start(args, fmt);                              \
@@ -71,4 +71,4 @@ LIST_OF_LOGS
 #define unsupported(fmt, ...) \
     error(fmt, ##__VA_ARGS__)
 
-#endif     // _LOG_H_
+#endif     // LOG_H

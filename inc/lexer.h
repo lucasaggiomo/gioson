@@ -1,5 +1,5 @@
-#ifndef _LEXER_H_
-#define _LEXER_H_
+#ifndef LEXER_H
+#define LEXER_H
 
 #include "strings.h"
 
@@ -49,4 +49,4 @@ Token lex_next_token(String_View *json);
  */
 Token lex_peek_token(String_View *json);
 
-#endif		// _LEXER_H_
+#endif		// LEXER_H

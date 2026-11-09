@@ -1,5 +1,5 @@
-#ifndef _GIOSON_H_
-#define _GIOSON_H_
+#ifndef GIOSON_H
+#define GIOSON_H
 
 /* =============================== PUBLIC API OF GIOSON =============================== */
 
@@ -43,4 +43,4 @@ size_t json_array_size(Json_Node *array);
 Json_Node *json_object_get_sv(Json_Node *object, String_View *sv_key);
 Json_Node *json_object_get(Json_Node *object, const char *key);
 
-#endif     // _GIOSON_H_
+#endif     // GIOSON_H

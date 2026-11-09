@@ -1,5 +1,5 @@
-#ifndef _STRINGS_H_
-#define _STRINGS_H_
+#ifndef STRINGS_H
+#define STRINGS_H
 
 #include <stddef.h>
 
@@ -62,4 +62,4 @@ void sv_skip_spaces_right(String_View* sv);
 int sv_strcmp(String_View *sv1, String_View *sv2);
 int sv_strcmp_cstr(String_View *sv, const char *cstr);
 
-#endif     // _STRINGS_H_
+#endif     // STRINGS_H

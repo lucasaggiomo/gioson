@@ -1,5 +1,5 @@
-#ifndef _NODE_H_
-#define _NODE_H_
+#ifndef NODE_H
+#define NODE_H
 
 #include "da.h"
 #include "gioson.h"
@@ -34,4 +34,4 @@ Json_Node *new_null();
 Json_Node *new_object();
 Json_Node *new_array();
 
-#endif     // _NODE_H_
+#endif     // NODE_H
