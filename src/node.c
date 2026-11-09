@@ -116,7 +116,7 @@ static void free_node(Json_Node *node) {
 }
 
 static Json_Node *new_node(Type_Kind kind) {
-    Json_Node *node = json_malloc(sizeof(*node));
+    Json_Node *node = JSON_MALLOC(sizeof(*node));
     node->kind = kind;
     node->refcount = 1;
 
@@ -214,7 +214,7 @@ int json_get_boolean(Json_Node *node) {
 
 String_View json_get_string(Json_Node *node) {
     if (!node || node->kind != TYPE_STRING)
-        return (String_View) { NULL, 0 };
+        return SV_NULL;
     return node->data.str;
 }
 

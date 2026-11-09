@@ -1,26 +1,29 @@
-#ifndef STRINGS_H
-#define STRINGS_H
+#ifndef STRING_VIEW_H
+#define STRING_VIEW_H
 
 #include <stddef.h>
 
 /// Points to an allocated string.
 /// Doesn't own the string, nor change it.
 typedef struct {
-    const char *data;
     size_t count;
+    const char *data;
 } String_View;
 
-#define SV(cstr)   \
-    (String_View) {     \
-        .data = (cstr), \
-        .count = strlen(cstr)  \
+#define SV(cstr)               \
+    (String_View) {            \
+        .count = strlen(cstr), \
+        .data = (cstr),        \
     };
 
-#define SV_len(cstr, len)   \
-    (String_View) {     \
-        .data = (cstr), \
-        .count = (len)  \
+#define SV_len(cstr, len) \
+    (String_View) {       \
+        .count = (len),   \
+        .data = (cstr),   \
     };
+
+#define SV_NULL \
+    (String_View) { .count = 0, .data = NULL }
 
 #define SV_FORMAT "%.*s"
 #define SV_ARGS(sv) (int)(sv)->count, (sv)->data
@@ -57,9 +60,9 @@ void sv_skip_right_while(String_View *sv, int predicate(int c));
 
 void sv_clear(String_View *sv);
 void sv_skip_spaces_left(String_View *sv);
-void sv_skip_spaces_right(String_View* sv);
+void sv_skip_spaces_right(String_View *sv);
 
 int sv_strcmp(String_View *sv1, String_View *sv2);
 int sv_strcmp_cstr(String_View *sv, const char *cstr);
 
-#endif     // STRINGS_H
+#endif     // STRING_VIEW_H

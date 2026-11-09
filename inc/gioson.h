@@ -3,12 +3,12 @@
 
 /* =============================== PUBLIC API OF GIOSON =============================== */
 
-#include "strings.h"
+#include "sv.h"
 
 typedef enum {
     NOT_FREED,
     FREED
-} node_status;
+} Node_tatus;
 
 typedef enum {
     TYPE_UNKNOWN,
@@ -20,7 +20,10 @@ typedef enum {
     TYPE_ARRAY
 } Type_Kind;
 
-#define json_malloc malloc
+#ifndef JSON_MALLOC
+#include <stdlib.h>
+#define JSON_MALLOC malloc
+#endif
 
 typedef struct Json_Node Json_Node;
 

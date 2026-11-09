@@ -1,7 +1,7 @@
 #ifndef LEXER_H
 #define LEXER_H
 
-#include "strings.h"
+#include "sv.h"
 
 typedef enum {
     TOK_EOF,

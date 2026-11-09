@@ -26,7 +26,8 @@ char *fread_all(const char *pathname) {
     if (nread != filesize) {
         perror("Error occurred\n");
     }
-
+    buffer[nread] = 0;
+    
     fclose(f);
 
     return buffer;

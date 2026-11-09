@@ -4,11 +4,11 @@
 #include <string.h>
 #include <unistd.h>
 
-#include "da.h"
-#include "gioson.h"
-#include "log.h"
-#include "strings.h"
-#include "utils.h"
+#include "../inc/da.h"
+#include "../inc/gioson.h"
+#include "../inc/log.h"
+#include "../inc/sv.h"
+#include "../inc/utils.h"
 
 /**
 Example:
