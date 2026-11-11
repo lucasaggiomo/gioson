@@ -6,11 +6,6 @@
 #include "sv.h"
 
 typedef enum {
-    NOT_FREED,
-    FREED
-} Node_tatus;
-
-typedef enum {
     TYPE_UNKNOWN,
     TYPE_STRING,
     TYPE_NUMBER,
@@ -43,7 +38,9 @@ Json_Node *json_array_get(Json_Node *array, size_t index);
 size_t json_array_size(Json_Node *array);
 
 /** Returns the value of the entry with given key in given object or NULL if key was not found. */
-Json_Node *json_object_get_sv(Json_Node *object, String_View *sv_key);
-Json_Node *json_object_get(Json_Node *object, const char *key);
+Json_Node *json_object_get(Json_Node *object, String_View key);
+
+/** Returns the value of the entry found with the given pattern string in given object or NULL if pattern didn't match anything. */
+Json_Node *json_object_get_pattern(Json_Node *object, String_View pattern);
 
 #endif     // GIOSON_H

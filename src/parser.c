@@ -57,8 +57,11 @@ static Json_Node *parse_object(String_View *json) {
         da_append(&obj->data.object, kvp);
 
         tok = lex_next_token(json);
-        require(tok.kind == TOK_CURLY_CLOSE || tok.kind == TOK_COMMA,
-                "Expected '}' or comma but found token of kind %d\n", tok.kind);
+        require(
+            tok.kind == TOK_CURLY_CLOSE || tok.kind == TOK_COMMA,
+            "Expected '}' or comma but found token of kind %d\n",
+            tok.kind
+        );
 
     } while (tok.kind == TOK_COMMA);
 
@@ -90,8 +93,7 @@ static Json_Node *parse_array(String_View *json) {
         da_append(&arr->data.array, node);
 
         tok = lex_next_token(json);
-        require(tok.kind == TOK_SQUARE_CLOSE || tok.kind == TOK_COMMA,
-                "Expected ']' or comma but found token of kind %d\n", tok.kind);
+        require(tok.kind == TOK_SQUARE_CLOSE || tok.kind == TOK_COMMA, "Expected ']' or comma but found token of kind %d\n", tok.kind);
     } while (tok.kind == TOK_COMMA);
 
     return arr;

@@ -56,8 +56,8 @@ size_t sv_find_right_while(String_View sv, int predicate(int c)) {
 
 /* ------------------------------- RAW ------------------------------- */
 
-String_View sv_chop_left(String_View *sv, size_t num) {
-    int min = MIN(num, sv->count);
+String_View sv_chop_left(String_View *sv, size_t count) {
+    int min = MIN(count, sv->count);
 
     String_View result = {
         .count = min,
@@ -69,8 +69,8 @@ String_View sv_chop_left(String_View *sv, size_t num) {
     return result;
 }
 
-String_View sv_chop_right(String_View *sv, size_t num) {
-    int min = MIN(num, sv->count);
+String_View sv_chop_right(String_View *sv, size_t count) {
+    int min = MIN(count, sv->count);
 
     String_View result = {
         .count = min,
@@ -81,94 +81,77 @@ String_View sv_chop_right(String_View *sv, size_t num) {
     return result;
 }
 
-/* ------------------------------- DELIM ------------------------------- */
+/* ------------------------------- INTERNAL HELPERS ------------------------------- */
 
-String_View sv_chop_left_untildelim(String_View *sv, char delim) {
-    size_t i = sv_find_left_delim(*sv, delim);
-    if (i < sv->count) ++i;     // chops also the delimiter in the return sv
-    return sv_chop_left(sv, i);
+static inline String_View sv_chop_left_at(String_View *sv, size_t index, SV_Bound_Mode mode) {
+    // chops everything if beyond count
+    if (index >= sv->count) return sv_chop_left(sv, sv->count);
+
+    switch (mode) {
+        // chops also the delimiter, so it will be removed from sv
+        case SV_BOUND_CHOP: return sv_chop_left(sv, index + 1);
+
+        // chops without the delimiter and skips the delimiter in sv
+        case SV_BOUND_DROP: {
+            String_View chopped = sv_chop_left(sv, index);
+            sv_skip_left(sv, 1);
+            return chopped;
+        }
+
+        default:
+        // chops without the delimiter, so it will remain in sv
+        case SV_BOUND_KEEP: return sv_chop_left(sv, index);
+    }
 }
 
-String_View sv_chop_right_untildelim(String_View *sv, char delim) {
-    size_t i = sv_find_right_delim(*sv, delim);
-    if (i == sv->count) i = 0;
-    return sv_chop_right(sv, sv->count - i);
+static inline String_View sv_chop_right_at(String_View *sv, size_t index, SV_Bound_Mode mode) {
+    // chops everything if beyond count
+    if (index >= sv->count) return sv_chop_right(sv, sv->count);
+
+    size_t rightIndex = sv->count - 1 - index;
+    switch (mode) {
+        // chops also the delimiter, so it will be removed from sv
+        case SV_BOUND_CHOP: return sv_chop_right(sv, rightIndex + 1);
+
+        // chops without the delimiter and skips the delimiter in sv
+        case SV_BOUND_DROP: {
+            String_View chopped = sv_chop_right(sv, rightIndex);
+            sv_skip_right(sv, 1);
+            return chopped;
+        }
+
+        default:
+        // chops without the delimiter, so it will remain in sv
+        case SV_BOUND_KEEP: return sv_chop_right(sv, rightIndex);
+    }
 }
 
-String_View sv_chop_left_splitbydelim(String_View *sv, char delim) {
-    size_t i = sv_find_left_delim(*sv, delim);
-    String_View chopped = sv_chop_left(sv, i);
-    if (i < sv->count) sv_skip_left(sv, 1);     // skips the delimiter in sv
-    return chopped;
+/* ------------------------------- LEFT ------------------------------- */
+
+String_View sv_chop_left_delim(String_View *sv, char delim, SV_Bound_Mode mode) {
+    return sv_chop_left_at(sv, sv_find_left_delim(*sv, delim), mode);
 }
 
-String_View sv_chop_right_splitbydelim(String_View *sv, char delim) {
-    size_t i = sv_find_right_delim(*sv, delim);
-    String_View chopped = sv_chop_right(sv, sv->count - i - 1);
-    if (i < sv->count) sv_skip_right(sv, 1);     // skips the delimiter in sv
-    return chopped;
+String_View sv_chop_left_until(String_View *sv, SV_Predicate pred, SV_Bound_Mode mode) {
+    return sv_chop_left_at(sv, sv_find_left_until(*sv, pred), mode);
 }
 
-String_View sv_chop_left_until(String_View *sv, int predicate(int c)) {
-    size_t i = sv_find_left_until(*sv, predicate);
-    if (i < sv->count) ++i;
-    return sv_chop_left(sv, i);
+String_View sv_chop_left_while(String_View *sv, SV_Predicate pred, SV_Bound_Mode mode) {
+    return sv_chop_left_at(sv, sv_find_left_while(*sv, pred), mode);
 }
 
-String_View sv_chop_right_until(String_View *sv, int predicate(int c)) {
-    size_t i = sv_find_right_until(*sv, predicate);
-    if (i == sv->count) i = 0;
-    return sv_chop_right(sv, sv->count - i);
+/* ------------------------------- RIGHT ------------------------------- */
+
+String_View sv_chop_right_delim(String_View *sv, char delim, SV_Bound_Mode mode) {
+    return sv_chop_right_at(sv, sv_find_right_delim(*sv, delim), mode);
 }
 
-String_View sv_chop_left_splitby(String_View *sv, int predicate(int c)) {
-    size_t i = sv_find_left_until(*sv, predicate);
-    String_View chopped = sv_chop_left(sv, i);
-    if (i < sv->count) sv_skip_left(sv, 1);     // skips the delimiter in sv
-    return chopped;
+String_View sv_chop_right_until(String_View *sv, SV_Predicate pred, SV_Bound_Mode mode) {
+    return sv_chop_right_at(sv, sv_find_right_until(*sv, pred), mode);
 }
 
-String_View sv_chop_right_splitby(String_View *sv, int predicate(int c)) {
-    size_t i = sv_find_right_until(*sv, predicate);
-    String_View chopped = sv_chop_right(sv, sv->count - i - 1);
-    if (i < sv->count) sv_skip_right(sv, 1);     // skips the delimiter in sv
-    return chopped;
-}
-
-String_View sv_chop_left_whilewith(String_View *sv, int predicate(int c)) {
-    size_t i = sv_find_left_while(*sv, predicate);
-    if (i < sv->count) ++i;
-    return sv_chop_left(sv, i);
-}
-
-String_View sv_chop_right_whilewith(String_View *sv, int predicate(int c)) {
-    size_t i = sv_find_right_while(*sv, predicate);
-    if (i == sv->count) i = 0;
-    return sv_chop_right(sv, sv->count - i);
-}
-
-String_View sv_chop_left_while(String_View *sv, int predicate(int c)) {
-    size_t i = sv_find_left_while(*sv, predicate);
-    String_View chopped = sv_chop_left(sv, i);
-    if (i < sv->count) sv_skip_left(sv, 1);     // skips the delimiter in sv
-    return chopped;
-}
-
-String_View sv_chop_right_while(String_View *sv, int predicate(int c)) {
-    size_t i = sv_find_right_while(*sv, predicate);
-    String_View chopped = sv_chop_right(sv, sv->count - i - 1);
-    if (i < sv->count) sv_skip_right(sv, 1);     // skips the delimiter in sv
-    return chopped;
-}
-
-String_View sv_chop_left_while_retain(String_View *sv, int predicate(int c)) {
-    size_t i = sv_find_left_while(*sv, predicate);
-    return sv_chop_left(sv, i);
-}
-
-String_View sv_chop_right_while_retain(String_View *sv, int predicate(int c)) {
-    size_t i = sv_find_right_while(*sv, predicate);
-    return sv_chop_right(sv, sv->count - i - 1);
+String_View sv_chop_right_while(String_View *sv, SV_Predicate pred, SV_Bound_Mode mode) {
+    return sv_chop_right_at(sv, sv_find_right_while(*sv, pred), mode);
 }
 
 /* =============================== SKIP =============================== */
@@ -184,19 +167,33 @@ void sv_skip_right(String_View *sv, size_t num) {
     sv->count -= min;
 }
 
-void sv_skip_left_until(String_View *sv, int predicate(int c)) {
+SV_SkipIf_Result sv_skip_left_if(String_View *sv, char c) {
+    if (sv_empty(*sv)) return SV_IS_EMPTY;
+    if (sv->data[0] != c) return SV_NOT_FOUND;
+    sv_skip_left(sv, 1);
+    return SV_OK;
+}
+
+SV_SkipIf_Result sv_skip_right_if(String_View *sv, char c) {
+    if (sv_empty(*sv)) return SV_IS_EMPTY;
+    if (sv->data[sv->count - 1] != c) return SV_NOT_FOUND;
+    sv_skip_left(sv, 1);
+    return SV_OK;
+}
+
+void sv_skip_left_until(String_View *sv, SV_Predicate predicate) {
     sv_skip_left(sv, sv_find_left_until(*sv, predicate));
 }
 
-void sv_skip_right_until(String_View *sv, int predicate(int c)) {
+void sv_skip_right_until(String_View *sv, SV_Predicate predicate) {
     sv_skip_right(sv, sv_find_right_until(*sv, predicate));
 }
 
-void sv_skip_left_while(String_View *sv, int predicate(int c)) {
+void sv_skip_left_while(String_View *sv, SV_Predicate predicate) {
     sv_skip_left(sv, sv_find_left_while(*sv, predicate));
 }
 
-void sv_skip_right_while(String_View *sv, int predicate(int c)) {
+void sv_skip_right_while(String_View *sv, SV_Predicate predicate) {
     sv_skip_right(sv, sv_find_right_while(*sv, predicate));
 }
 
@@ -231,12 +228,12 @@ int sv_strcmp_cstr(String_View sv, const char *cstr) {
     return strncmp(sv.data, cstr, len);
 }
 
-String_View sv_left_slice(String_View sv, size_t count) {
+String_View sv_slice_left(String_View sv, size_t count) {
     count = MIN(count, sv.count);
     return SV_LEN(sv.data, count);
 }
 
-String_View sv_right_slice(String_View sv, size_t count) {
+String_View sv_slice_right(String_View sv, size_t count) {
     count = MIN(count, sv.count);
     return (String_View) {
         .data = sv.data + (sv.count - count),

@@ -4,6 +4,14 @@
 #include <stddef.h>
 #include <string.h>
 
+typedef int (*SV_Predicate)(int c);
+
+typedef enum {
+    SV_BOUND_DROP,     // Excluded from output, removed from input: "Giov.anni" -> [ "Giov ", "anni"  ]
+    SV_BOUND_CHOP,     // Included in output, removed from input:   "Giov.anni" -> [ "Giov.", "anni"  ]
+    SV_BOUND_KEEP      // Excluded from output, kept in input:      "Giov.anni" -> [ "Giov ", ".anni" ]
+} SV_Bound_Mode;
+
 /// Points to an allocated string.
 /// Doesn't own the string, nor change it.
 typedef struct {
@@ -42,11 +50,11 @@ typedef struct {
 /** Returns the index of the first found delimiter in 'sv' from left, otherwise returns sv->count. */
 size_t sv_find_left_delim(String_View sv, char delim);
 
-/** Returns the index of the first character in 'sv' from left such that the predicate is false, otherwise returns sv->count. */
-size_t sv_find_left_until(String_View sv, int predicate(int c));
-
 /** Returns the index of the first character in 'sv' from left such that the predicate is true, otherwise returns sv->count. */
-size_t sv_find_left_while(String_View sv, int predicate(int c));
+size_t sv_find_left_until(String_View sv, SV_Predicate predicate);
+
+/** Returns the index of the first character in 'sv' from left such that the predicate is false, otherwise returns sv->count. */
+size_t sv_find_left_while(String_View sv, SV_Predicate predicate);
 
 /* ------------------------------- RIGHT ------------------------------- */
 
@@ -54,134 +62,40 @@ size_t sv_find_left_while(String_View sv, int predicate(int c));
 size_t sv_find_right_delim(String_View sv, char delim);
 
 /** Returns the index of the first character in 'sv' from right such that the predicate is false, otherwise returns sv->count. */
-size_t sv_find_right_until(String_View sv, int predicate(int c));
+size_t sv_find_right_until(String_View sv, SV_Predicate predicate);
 
 /** Returns the index of the first character in 'sv' from right such that the predicate is true, otherwise returns sv->count. */
-size_t sv_find_right_while(String_View sv, int predicate(int c));
+size_t sv_find_right_while(String_View sv, SV_Predicate predicate);
 
 /* =============================== CHOP =============================== */
 
 /* ------------------------------- RAW ------------------------------- */
 
-/** Returns a new String_View of the first 'num' characters, chopping them by 'sv'. */
-String_View sv_chop_left(String_View *sv, size_t num);
+/** Returns a new String_View of the first 'count' characters, chopping them by 'sv'. */
+String_View sv_chop_left(String_View *sv, size_t count);
 
-/** Returns a new String_View of the last 'num' characters, chopping them by 'sv'. */
-String_View sv_chop_right(String_View *sv, size_t num);
+/** Returns a new String_View of the last 'count' characters, chopping them by 'sv'. */
+String_View sv_chop_right(String_View *sv, size_t count);
 
-/* ------------------------------- DELIM ------------------------------- */
+/* ------------------------------- LEFT ------------------------------- */
 
-/**
- * Chops from the left until the first delimiter is found or chops all if not found. The delimiter is included in chopped part.
- * e.g.: 'Giov.anni' with delim '.' results in:
- *   - output = 'Giov.'
- *   - sv = 'anni'
- */
-String_View sv_chop_left_untildelim(String_View *sv, char delim);
+String_View sv_chop_left_delim(String_View *sv, char delim, SV_Bound_Mode mode);
+String_View sv_chop_left_until(String_View *sv, SV_Predicate pred, SV_Bound_Mode mode);
+String_View sv_chop_left_while(String_View *sv, SV_Predicate pred, SV_Bound_Mode mode);
 
-/**
- * Chops from the right until the first delimiter is found or chops all if not found. The delimiter is included in chopped part.
- * e.g.: 'Giov.anni' with delim '.' results in:
- *   - output = '.anni'
- *   - sv = 'Giov'
- */
-String_View sv_chop_right_untildelim(String_View *sv, char delim);
+/* ------------------------------- RIGHT ------------------------------- */
 
-/**
- * Chops from the left until the first delimiter is found or chops all if not found. The delimiter is excluded in chopped part.
- * e.g.: 'Giov.anni' with delim '.' results in:
- *   - output = 'Giov'
- *   - sv = 'anni'
- */
-String_View sv_chop_left_splitbydelim(String_View *sv, char delim);
+String_View sv_chop_right_delim(String_View *sv, char delim, SV_Bound_Mode mode);
+String_View sv_chop_right_until(String_View *sv, SV_Predicate pred, SV_Bound_Mode mode);
+String_View sv_chop_right_while(String_View *sv, SV_Predicate pred, SV_Bound_Mode mode);
 
-/**
- * Chops from the left until the first delimiter is found or chops all if not found. The delimiter is excluded in chopped part.
- * e.g.: 'Giov.anni' with delim '.' results in:
- *   - output = 'anni'
- *   - sv = 'Giov'
- */
-String_View sv_chop_right_splitbydelim(String_View *sv, char delim);
+/* ------------------------------- SHORTCUTS ------------------------------- */
 
-/**
- * Chops from the left until the predicate becomes true or chops all if it's never true. The delimiter is included in chopped part.
- * e.g.: 'Giov anni' with predicate isspace results in:
- *   - output = 'Giov '
- *   - sv = 'anni'
- */
-String_View sv_chop_left_until(String_View *sv, int predicate(int c));
+static inline String_View sv_chop_left_splitbydelim(String_View *sv, char delim) { return sv_chop_left_delim(sv, delim, SV_BOUND_DROP); }
+static inline String_View sv_chop_left_splitby(String_View *sv, SV_Predicate pred) { return sv_chop_left_until(sv, pred, SV_BOUND_DROP); }
 
-/**
- * Chops from the right until the predicate becomes true or chops all if it's never true. The delimiter is included in chopped part.
- * e.g.: 'Giov anni' with predicate isspace results in:
- *   - output = ' anni'
- *   - sv = 'Giov'
- */
-String_View sv_chop_right_until(String_View *sv, int predicate(int c));
-
-/**
- * Chops from the left until the predicate becomes true or chops all if it's never true. The delimiter is excluded in chopped part.
- * e.g.: 'Giov anni' with predicate isspace results in:
- *   - output = 'Giov'
- *   - sv = 'anni'
- */
-String_View sv_chop_left_splitby(String_View *sv, int predicate(int c));
-
-/**
- * Chops from the right until the predicate becomes true or chops all if it's never true. The delimiter is excluded in chopped part.
- * e.g.: 'Giov anni' with predicate isspace results in:
- *   - output = 'anni'
- *   - sv = 'Giov'
- */
-String_View sv_chop_right_splitby(String_View *sv, int predicate(int c));
-
-/**
- * Chops from the left until the predicate becomes false or chops all if it's never false. The delimiter is included in chopped part.
- * e.g.: 'aaaaBcccc' with predicate isvowel results in:
- *   - output = 'aaaaB'
- *   - sv = 'cccc'
- */
-String_View sv_chop_left_whilewith(String_View *sv, int predicate(int c));     // naming sucks
-
-/**
- * Chops from the right until the predicate becomes false or chops all if it's never false. The delimiter is included in chopped part.
- * e.g.: 'aaaaBcccc' with predicate isvowel results in:
- *   - output = 'Bcccc'
- *   - sv = 'aaaa'
- */
-String_View sv_chop_right_whilewith(String_View *sv, int predicate(int c));     // naming sucks
-
-/**
- * Chops from the left until the predicate becomes false or chops all if it's never false. The delimiter is excluded in chopped part.
- * e.g.: 'aaaaBcccc' with predicate isvowel results in:
- *   - output = 'aaaa'
- *   - sv = 'cccc'
- */
-String_View sv_chop_left_while(String_View *sv, int predicate(int c));
-
-/**
- * Chops from the right until the predicate becomes false or chops all if it's never false. The delimiter is excluded in chopped part.
- * e.g.: 'aaaaBcccc' with predicate isvowel results in:
- *   - output = 'cccc'
- *   - sv = 'aaaa'
- */
-String_View sv_chop_right_while(String_View *sv, int predicate(int c));
-
-/**
- * Chops from the left until the predicate becomes false or chops all if it's never false. The delimiter is excluded in chopped part but remains in 'sv'.
- * e.g.: 'aaaaBcccc' with predicate isvowel results in:
- *   - output = 'aaaa'
- *   - sv = 'Bcccc'
- */
-String_View sv_chop_left_while_retain(String_View *sv, int predicate(int c));
-
-/**
- * Chops from the right until the predicate becomes false or chops all if it's never false. The delimiter is excluded in chopped part but remains in 'sv'.
- * e.g.: 'aaaaBcccc' with predicate isvowel results in:
- *   - output = 'cccc'
- *   - sv = 'aaaaB'
- */
-String_View sv_chop_right_while_retain(String_View *sv, int predicate(int c));
+static inline String_View sv_chop_right_splitbydelim(String_View *sv, char delim) { return sv_chop_right_delim(sv, delim, SV_BOUND_DROP); }
+static inline String_View sv_chop_right_splitby(String_View *sv, SV_Predicate pred) { return sv_chop_right_until(sv, pred, SV_BOUND_DROP); }
 
 /* =============================== SKIP =============================== */
 
@@ -191,17 +105,35 @@ void sv_skip_left(String_View *sv, size_t num);
 /** Skips the last 'num' characters in 'sv'. */
 void sv_skip_right(String_View *sv, size_t num);
 
+typedef enum {
+    SV_OK,
+    SV_NOT_FOUND,
+    SV_IS_EMPTY
+} SV_SkipIf_Result;
+
+/**
+ * Skips the first character if it's c, does nothing otherwise (or if the sv is empty).
+ * Returns SV_OK (0) if it has been skipped, SV_NOT_FOUND (1) if the first character is not c, SV_IS_EMPTY (2) if sv is empty.
+ */
+SV_SkipIf_Result sv_skip_left_if(String_View *sv, char c);
+
+/**
+ * Skips the last character if it's c, does nothing otherwise (or if the sv is empty).
+ * Returns SV_OK (0) if it has been skipped, SV_NOT_FOUND (1) if the last character is not c, SV_IS_EMPTY (2) if sv is empty.
+ */
+SV_SkipIf_Result sv_skip_right_if(String_View *sv, char c);
+
 /** Skips characters in 'sv' from left until the predicate becames true or skips all if it's never true. */
-void sv_skip_left_until(String_View *sv, int predicate(int c));
+void sv_skip_left_until(String_View *sv, SV_Predicate predicate);
 
 /** Skips characters in 'sv' from right until the predicate becames true or skips all if it's never true. */
-void sv_skip_right_until(String_View *sv, int predicate(int c));
+void sv_skip_right_until(String_View *sv, SV_Predicate predicate);
 
 /** Skips characters in 'sv' from left until the predicate becames false or skips all if it's never false. */
-void sv_skip_left_while(String_View *sv, int predicate(int c));
+void sv_skip_left_while(String_View *sv, SV_Predicate predicate);
 
 /** Skips characters in 'sv' from right until the predicate becames false or skips all if it's never false. */
-void sv_skip_right_while(String_View *sv, int predicate(int c));
+void sv_skip_right_while(String_View *sv, SV_Predicate predicate);
 
 // --- useful shortcuts
 
@@ -224,8 +156,8 @@ static inline int sv_empty(String_View sv) {
     return sv.count == 0;
 }
 
-String_View sv_left_slice(String_View sv, size_t count);
-String_View sv_right_slice(String_View sv, size_t count);
+String_View sv_slice_left(String_View sv, size_t count);
+String_View sv_slice_right(String_View sv, size_t count);
 String_View sv_slice(String_View sv, size_t offset, size_t count);
 
 #endif     // STRING_VIEW_H

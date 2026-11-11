@@ -1,9 +1,9 @@
 #include "node.h"
-
 #include "da.h"
+#include "gioson.h"
 #include "log.h"
 
-#include "gioson.h"
+#include <ctype.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -170,7 +170,7 @@ void json_print(Json_Node *node, int indent) {
 
 void json_acquire(Json_Node *node) {
     if (!node) {
-        log_warning("Tried to acquire NULL node");
+        log_warning("Tried to acquire NULL node\n");
         return;
     }
 
@@ -179,12 +179,12 @@ void json_acquire(Json_Node *node) {
 
 void json_release(Json_Node *node) {
     if (!node) {
-        log_warning("Tried to release NULL node");
+        log_warning("Tried to release NULL node\n");
         return;
     }
 
     if (node->refcount == 0) {
-        log_warning("Tried to release a node with refcount 0");
+        log_warning("Tried to release a node with refcount 0\n");
         return;
     }
 
@@ -231,25 +231,73 @@ size_t json_array_size(Json_Node *array) {
 }
 
 // O(n) implementation
-Json_Node *json_object_get_sv(Json_Node *object, String_View *sv_key) {
+Json_Node *json_object_get(Json_Node *object, String_View key) {
     if (!object || object->kind != TYPE_OBJECT)
         return NULL;
 
     da_foreach(Json_Kvp, kvp, &object->data.object) {
-        if (SV_EQUALS(&kvp->key, sv_key))
+        if (sv_equals(kvp->key, key))
             return kvp->value;
     }
     return NULL;
 }
 
-// O(n) implementation
-Json_Node *json_object_get(Json_Node *object, const char *key) {
-    if (!object || object->kind != TYPE_OBJECT)
-        return NULL;
-
-    da_foreach(Json_Kvp, kvp, &object->data.object) {
-        if (SV_EQUALS_CSTR(&kvp->key, key))
-            return kvp->value;
+/**
+ * Returns the indexed item from the array in the given indexPattern, otherwise returns the same array.
+ * Assumes the given indexPattern has the form of subsequent indexing with square brackets, like this:
+ *   indexPattern = "[1][7]...[12][42]"
+ */
+static Json_Node *json_getbyindex_if_any(Json_Node *arrayNode, String_View indexPattern) {
+    // indexPattern = "[1][7]...[12][42]"
+    switch (sv_skip_left_if(&indexPattern, '[')) {
+        case SV_IS_EMPTY: return arrayNode;     // no more indexing, end of recursion
+        case SV_NOT_FOUND: error("Expected '[', but found '%c'\n", indexPattern.data[0]); return NULL;
+        case SV_OK: break;     // goes on
     }
-    return NULL;
+
+    require(arrayNode->kind == TYPE_ARRAY, "Tried to use array indexing with non-array node\n");
+
+    // SV_OK: chops the index, doing splitby ']'
+    // indexPattern = "1][7]...[12][42]"
+    String_View indexStr = sv_chop_left_splitbydelim(&indexPattern, ']');     // assumes ']' is present, otherwise UB
+    // indexStr = "1", indexPattern = "[7]...[12][42]"
+
+    // parses the index
+    size_t index = (size_t)atoll(indexStr.data);
+
+    Json_Array *arr = &arrayNode->data.array;
+    require(index < arr->count, "Index out of bounds\n");
+
+    // indexes the array and goes on recursively with next indexPattern if any
+    return json_getbyindex_if_any(arr->items[index], indexPattern);
+}
+
+/**
+ * Pattern is a sequence of [name] separated by '.', where 'name' can be
+ * - a simple string name (name of the key in the current object)
+ * - a simple name with one or more indexer (name of an array in the current object followed by one or more 0-indexing with square brackets [])
+ *
+ * e.g.: "object.array[1].multiarray[2][9][0].field"
+ *
+ * TODO: support wildcard '*'
+ */
+Json_Node *json_object_get_pattern(Json_Node *object, String_View pattern) {
+    if (sv_empty(pattern)) return object;
+    if (!object || object->kind != TYPE_OBJECT) return NULL;
+
+    // pattern = "giovanni[1][4][7].other"
+    String_View curr = sv_chop_left_while(&pattern, isalnum, SV_BOUND_KEEP);
+    // curr = "giovanni", pattern = "[1][4][7].other"
+
+    Json_Node *currNode = json_object_get(object, curr);
+    if (currNode == NULL) return NULL;     // if not found, returns NULL and breaks the recursion
+
+    String_View indexPattern = sv_chop_left_splitbydelim(&pattern, '.');
+    // indexPattern = "[1][4][7]", pattern = "other"
+
+    // indexes currNode with all the indexes in indexPattern (otherwise does nothing if indexPattern is empty)
+    currNode = json_getbyindex_if_any(currNode, indexPattern);
+
+    // recursively call json_object_get_pattern for the rest of the pattern
+    return json_object_get_pattern(currNode, pattern);
 }

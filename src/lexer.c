@@ -74,7 +74,7 @@ Token lex_next_token(String_View *json) {
 
     } else if (isdigit(json->data[0])) {     // NUMBER  // TODO: handle numbers starting with '-' or '.'
         // chops whole number
-        result = sv_chop_left_while_retain(json, isdigit);
+        result = sv_chop_left_while(json, isdigit, SV_BOUND_KEEP);
         kind = TOK_NUMBER;
 
     } else if (strncmp(json->data, "true", 4) == 0) {
