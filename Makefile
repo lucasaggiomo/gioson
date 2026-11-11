@@ -1,14 +1,23 @@
-EXE = test
-TEST = test/test1.c
 JSON = test/test.json
+CFLAGS = -Wall -Wextra -g -O0
 
-# stupid Makefile just to make life easier
-build/$(EXE): ./src/** ./inc/**
+TST_PATH = ./test
+SRC_PATH = ./src
+INC_PATH = ./inc
+BUILD = ./build
+
+tests: $(BUILD)/test1 $(BUILD)/testsv
+
+$(BUILD)/testjson: $(TST_PATH)/testjson.c $(SRC_PATH)/** $(INC_PATH)/**
 	@mkdir -p $(@D)
-	gcc -Wall -Wextra -g -Iinc ./src/*.c $(TEST) -o ./build/$(EXE)
+	gcc $(CFLAGS) -I$(INC_PATH) $(SRC_PATH)/*.c $< -o $@
+
+$(BUILD)/testsv: $(TST_PATH)/testsv.c $(SRC_PATH)/sv.c $(INC_PATH)/sv.h
+	@mkdir -p $(@D)
+	gcc $(CFLAGS) -I$(INC_PATH) $(SRC_PATH)/sv.c $< -o $@
 
 clean:
-	rm -rf build
+	rm -rf $(BUILD)
 
-run: build/$(EXE)
-	./build/$(EXE) $(JSON)
+run: $(TARGET)
+	$(TARGET) $(JSON)

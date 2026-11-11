@@ -1,16 +1,15 @@
 #include "lexer.h"
 
 #include <ctype.h>
-#include <stdio.h>
 #include <string.h>
 
 #include "log.h"
 
 /* =============================== LEXER =============================== */
 
+#ifdef _DEBUG
+#include <stdio.h>
 void tok_print(Token *tok) {
-    (void)tok;
-    return;
     switch (tok->kind) {
         case TOK_CURLY_OPEN:
             putchar('{');
@@ -51,11 +50,14 @@ void tok_print(Token *tok) {
     }
     printf("\n");
 }
+#else
+void tok_print(Token *tok) { (void)tok; }
+#endif
 
 Token lex_next_token(String_View *json) {
     sv_skip_spaces_left(json);
 
-    if (SV_EMPTY(json)) {
+    if (sv_empty(*json)) {
         tok_print(&TOK_EMPTY);     // DEBUG
         return TOK_EMPTY;
     }
@@ -66,13 +68,13 @@ Token lex_next_token(String_View *json) {
     if (json->data[0] == '\"') {     // STRING
         // chops whole string
         // WARNING: for simplicity assumes that string doesn't contain the character "
-        sv_skip_left(json, 1);                          // skips first "
-        result = sv_chop_splitby_delim(json, '\"');     // discards last "
+        sv_skip_left(json, 1);                              // skips first "
+        result = sv_chop_left_splitbydelim(json, '\"');     // discards last "
         kind = TOK_STRING;
 
     } else if (isdigit(json->data[0])) {     // NUMBER  // TODO: handle numbers starting with '-' or '.'
         // chops whole number
-        result = sv_chop_left_while(json, isdigit);
+        result = sv_chop_left_while_retain(json, isdigit);
         kind = TOK_NUMBER;
 
     } else if (strncmp(json->data, "true", 4) == 0) {
