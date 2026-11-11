@@ -31,19 +31,19 @@ void tok_print(Token *tok) {
             putchar(',');
             break;
         case TOK_STRING:
-            printf("\"" SV_FORMAT "\"", SV_ARGS(&(tok->data)));
+            printf("\"" SV_FORMAT "\"", SV_ARGS(&(tok->content)));
             break;
         case TOK_NUMBER:
-            printf(SV_FORMAT, SV_ARGS(&(tok->data)));
+            printf(SV_FORMAT, SV_ARGS(&(tok->content)));
             break;
         case TOK_TRUE:
-            printf(SV_FORMAT, SV_ARGS(&(tok->data)));
+            printf(SV_FORMAT, SV_ARGS(&(tok->content)));
             break;
         case TOK_FALSE:
-            printf(SV_FORMAT, SV_ARGS(&(tok->data)));
+            printf(SV_FORMAT, SV_ARGS(&(tok->content)));
             break;
         case TOK_NULL:
-            printf(SV_FORMAT, SV_ARGS(&(tok->data)));
+            printf(SV_FORMAT, SV_ARGS(&(tok->content)));
             break;
         case TOK_EOF:
             printf("EOF");

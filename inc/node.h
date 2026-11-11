@@ -27,7 +27,7 @@ struct Json_Node {
         String_View str;
         Json_Array array;
         Json_Object object;
-    } data;
+    } as;
 };
 
 Json_Node *new_string(String_View *str);

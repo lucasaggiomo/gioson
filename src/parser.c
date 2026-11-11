@@ -45,7 +45,7 @@ static Json_Node *parse_object(String_View *json) {
         tok = lex_next_token(json);
         require(tok.kind == TOK_STRING, "Expected key but found token of kind %d\n", tok.kind);
 
-        Json_Kvp kvp = { .key = tok.data };
+        Json_Kvp kvp = { .key = tok.content };
 
         tok = lex_next_token(json);
         require(tok.kind == TOK_COLON, "Expected colon but found token of kind %d\n", tok.kind);
@@ -54,7 +54,7 @@ static Json_Node *parse_object(String_View *json) {
         require(value != NULL, "Expected value but found NULL\n");
 
         kvp.value = value;
-        da_append(&obj->data.object, kvp);
+        da_append(&obj->as.object, kvp);
 
         tok = lex_next_token(json);
         require(
@@ -90,7 +90,7 @@ static Json_Node *parse_array(String_View *json) {
     do {
         Json_Node *node = json_parse(json);
         require(node != NULL, "Expected JSON object, array or literal but found NULL\n");
-        da_append(&arr->data.array, node);
+        da_append(&arr->as.array, node);
 
         tok = lex_next_token(json);
         require(tok.kind == TOK_SQUARE_CLOSE || tok.kind == TOK_COMMA, "Expected ']' or comma but found token of kind %d\n", tok.kind);
@@ -115,14 +115,14 @@ Json_Node *json_parse(String_View *json) {
             return parse_array(json);
 
         case TOK_STRING:
-            return new_string(&tok.data);
+            return new_string(&tok.content);
 
         case TOK_DOUBLE:
-            double doubleNum = atof(tok.data.data);     // uses atof for simplicity, assuming no errors
+            double doubleNum = atof(tok.content.data);     // uses atof for simplicity, assuming no errors
             return new_double(doubleNum);
 
         case TOK_INTEGER:
-            long long int intNum = atoll(tok.data.data);     // uses atoll for simplicity, assuming no errors
+            long long int intNum = atoll(tok.content.data);     // uses atoll for simplicity, assuming no errors
             return new_integer(intNum);
 
         case TOK_TRUE:

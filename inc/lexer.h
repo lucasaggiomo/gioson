@@ -21,14 +21,14 @@ typedef enum {
 
 typedef struct {
     Token_Kind kind;
-    String_View data;     // content of the token
+    String_View content;     // content of the token
 } Token;
 
 /// equivalent to `{0}`
 #define TOK_EMPTY        \
     (Token) {            \
         .kind = TOK_EOF, \
-        .data = { 0 }    \
+        .content = { 0 }    \
     }
 
 void tok_print(Token *tok);

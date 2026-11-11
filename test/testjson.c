@@ -80,7 +80,7 @@ int main(int argc, char *argv[]) {
     json_release(node);
 
     // now key_value should not have been deallocated
-    require(json_get_type(key_value) == TYPE_INTEGER, "Expected object type\n");
+    require(json_get_type(key_value) == TYPE_INTEGER, "Expected integer type\n");
     long long int number = json_get_integer(key_value);
     printf("key value is: %lld\n", number);
 

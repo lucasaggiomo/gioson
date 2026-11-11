@@ -27,19 +27,19 @@ static void json_recursive_print(Json_Node *node, int indent) {
             break;
 
         case TYPE_STRING:
-            printf("\"" SV_FORMAT "\"", SV_ARGS(&node->data.str));
+            printf("\"" SV_FORMAT "\"", SV_ARGS(&node->as.str));
             break;
 
         case TYPE_DOUBLE:
-            printf("%g", node->data.doubleNum);
+            printf("%g", node->as.doubleNum);
             break;
 
         case TYPE_INTEGER:
-            printf("%lld", node->data.intNum);
+            printf("%lld", node->as.intNum);
             break;
 
         case TYPE_BOOLEAN:
-            printf("%s", node->data.boolean ? "true" : "false");
+            printf("%s", node->as.boolean ? "true" : "false");
             break;
 
         case TYPE_NULL:
@@ -48,17 +48,17 @@ static void json_recursive_print(Json_Node *node, int indent) {
 
         case TYPE_OBJECT:
             printf("{");
-            if (!da_empty(&node->data.object)) {
+            if (!da_empty(&node->as.object)) {
                 printf("\n");
-                for (size_t i = 0; i < node->data.object.count; i++) {
-                    Json_Kvp kvp = node->data.object.items[i];
+                for (size_t i = 0; i < node->as.object.count; i++) {
+                    Json_Kvp kvp = node->as.object.items[i];
 
                     print_indent(indent + 1);
 
                     printf("\"" SV_FORMAT "\": ", SV_ARGS(&kvp.key));
                     json_recursive_print(kvp.value, indent + 1);
 
-                    if (i < node->data.object.count - 1)
+                    if (i < node->as.object.count - 1)
                         printf(",");
                     printf("\n");
                 }
@@ -69,14 +69,14 @@ static void json_recursive_print(Json_Node *node, int indent) {
 
         case TYPE_ARRAY:
             printf("[");
-            if (!da_empty(&node->data.array)) {
+            if (!da_empty(&node->as.array)) {
                 printf("\n");
-                for (size_t i = 0; i < node->data.array.count; i++) {
-                    Json_Node *item = node->data.array.items[i];
+                for (size_t i = 0; i < node->as.array.count; i++) {
+                    Json_Node *item = node->as.array.items[i];
 
                     print_indent(indent + 1);
                     json_recursive_print(item, indent + 1);
-                    if (i < node->data.array.count - 1)
+                    if (i < node->as.array.count - 1)
                         printf(",");
                     printf("\n");
                 }
@@ -96,16 +96,16 @@ static void free_node(Json_Node *node) {
     switch (node->kind) {
         case TYPE_OBJECT:
             // releases all subobjects
-            da_foreach(Json_Kvp, kvp, &node->data.object) {
+            da_foreach(Json_Kvp, kvp, &node->as.object) {
                 json_release(kvp->value);
             }
-            da_deinit(&node->data.object);
+            da_deinit(&node->as.object);
             break;
 
         case TYPE_ARRAY:
             // releases all items
-            da_apply(&node->data.array, json_release);
-            da_deinit(&node->data.object);
+            da_apply(&node->as.array, json_release);
+            da_deinit(&node->as.object);
             break;
 
         case TYPE_STRING:
@@ -134,43 +134,43 @@ static Json_Node *new_node(Type_Kind kind) {
 
 Json_Node *new_string(String_View *str) {
     Json_Node *node = new_node(TYPE_STRING);
-    node->data.str = *str;     // copies String_View
+    node->as.str = *str;     // copies String_View
     return node;
 }
 
 Json_Node *new_double(double number) {
     Json_Node *node = new_node(TYPE_DOUBLE);
-    node->data.doubleNum = number;
+    node->as.doubleNum = number;
     return node;
 }
 
 Json_Node *new_integer(long long int number) {
     Json_Node *node = new_node(TYPE_INTEGER);
-    node->data.intNum = number;
+    node->as.intNum = number;
     return node;
 }
 
 Json_Node *new_boolean(int boolean) {
     Json_Node *node = new_node(TYPE_BOOLEAN);
-    node->data.boolean = (boolean == 1);
+    node->as.boolean = (boolean == 1);
     return node;
 }
 
 Json_Node *new_null() {
     Json_Node *node = new_node(TYPE_NULL);
-    memset(&(node->data), 0, sizeof(node->data));     // in teoria è inutile
+    memset(&(node->as), 0, sizeof(node->as));     // in teoria è inutile
     return node;
 }
 
 Json_Node *new_object() {
     Json_Node *node = new_node(TYPE_OBJECT);
-    da_init(&(node->data.object));
+    da_init(&(node->as.object));
     return node;
 }
 
 Json_Node *new_array() {
     Json_Node *node = new_node(TYPE_ARRAY);
-    da_init(&(node->data.array));
+    da_init(&(node->as.array));
     return node;
 }
 
@@ -214,37 +214,37 @@ Type_Kind json_get_type(Json_Node *node) {
 double json_get_double(Json_Node *node) {
     if (!node || node->kind != TYPE_DOUBLE)
         return 0.0;
-    return node->data.doubleNum;
+    return node->as.doubleNum;
 }
 
 long long int json_get_integer(Json_Node *node) {
     if (!node || node->kind != TYPE_INTEGER)
         return 0LL;
-    return node->data.intNum;
+    return node->as.intNum;
 }
 
 int json_get_boolean(Json_Node *node) {
     if (!node || node->kind != TYPE_BOOLEAN)
         return 0;
-    return node->data.boolean;
+    return node->as.boolean;
 }
 
 String_View json_get_string(Json_Node *node) {
     if (!node || node->kind != TYPE_STRING)
         return SV_NULL;
-    return node->data.str;
+    return node->as.str;
 }
 
 Json_Node *json_array_get(Json_Node *array, size_t index) {
     if (!array || array->kind != TYPE_ARRAY)
         return NULL;
-    return da_get_or_default(&array->data.array, index, NULL);
+    return da_get_or_default(&array->as.array, index, NULL);
 }
 
 size_t json_array_size(Json_Node *array) {
     if (!array || array->kind != TYPE_ARRAY)
         return 0;
-    return array->data.array.count;
+    return array->as.array.count;
 }
 
 // O(n) implementation
@@ -252,7 +252,7 @@ Json_Node *json_object_get(Json_Node *object, String_View key) {
     if (!object || object->kind != TYPE_OBJECT)
         return NULL;
 
-    da_foreach(Json_Kvp, kvp, &object->data.object) {
+    da_foreach(Json_Kvp, kvp, &object->as.object) {
         if (sv_equals(kvp->key, key))
             return kvp->value;
     }
@@ -282,7 +282,7 @@ static Json_Node *json_getbyindex_if_any(Json_Node *arrayNode, String_View index
     // parses the index
     size_t index = (size_t)atoll(indexStr.data);
 
-    Json_Array *arr = &arrayNode->data.array;
+    Json_Array *arr = &arrayNode->as.array;
     require(index < arr->count, "Index out of bounds\n");
 
     // indexes the array and goes on recursively with next indexPattern if any
