@@ -30,8 +30,12 @@ static void json_recursive_print(Json_Node *node, int indent) {
             printf("\"" SV_FORMAT "\"", SV_ARGS(&node->data.str));
             break;
 
-        case TYPE_NUMBER:
-            printf("%g", node->data.num);
+        case TYPE_DOUBLE:
+            printf("%g", node->data.doubleNum);
+            break;
+
+        case TYPE_INTEGER:
+            printf("%lld", node->data.intNum);
             break;
 
         case TYPE_BOOLEAN:
@@ -105,7 +109,8 @@ static void free_node(Json_Node *node) {
             break;
 
         case TYPE_STRING:
-        case TYPE_NUMBER:
+        case TYPE_DOUBLE:
+        case TYPE_INTEGER:
         case TYPE_BOOLEAN:
         case TYPE_NULL:
         default:
@@ -133,9 +138,15 @@ Json_Node *new_string(String_View *str) {
     return node;
 }
 
-Json_Node *new_number(double number) {
-    Json_Node *node = new_node(TYPE_NUMBER);
-    node->data.num = number;
+Json_Node *new_double(double number) {
+    Json_Node *node = new_node(TYPE_DOUBLE);
+    node->data.doubleNum = number;
+    return node;
+}
+
+Json_Node *new_integer(long long int number) {
+    Json_Node *node = new_node(TYPE_INTEGER);
+    node->data.intNum = number;
     return node;
 }
 
@@ -200,10 +211,16 @@ Type_Kind json_get_type(Json_Node *node) {
     return node->kind;
 }
 
-double json_get_number(Json_Node *node) {
-    if (!node || node->kind != TYPE_NUMBER)
+double json_get_double(Json_Node *node) {
+    if (!node || node->kind != TYPE_DOUBLE)
         return 0.0;
-    return node->data.num;
+    return node->data.doubleNum;
+}
+
+long long int json_get_integer(Json_Node *node) {
+    if (!node || node->kind != TYPE_INTEGER)
+        return 0LL;
+    return node->data.intNum;
 }
 
 int json_get_boolean(Json_Node *node) {

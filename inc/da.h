@@ -127,8 +127,13 @@
 #define da_append_array(da, arr) \
     da_append_n(da, arr, sizeof(arr) / sizeof(*arr))
 
+/** Actually works with both da and view. */
 #define da_append_da(da, da_src) \
     da_append_n(da, (da_src)->items, (da_src)->count)
+
+/** Actually works with both da and view. */
+#define da_append_view(da, da_view_src) \
+    da_append_n(da, (da_view_src)->items, (da_view_src)->count)
 
 /** 'it' is a pointer to the current item */
 #define da_foreach(Type, it, da) \
@@ -269,5 +274,11 @@
 
 #define VIEW_FROM_ARRAY(ViewType, arr) \
     ((ViewType) { .count = ARRAY_COUNT(arr), .items = (arr) })
+
+#define VIEW_FROM(ViewType, ItemType, ...)                                \
+    ((ViewType) {                                                               \
+        .count = sizeof((const ItemType[]) { __VA_ARGS__ }) / sizeof(ItemType), \
+        .items = (const ItemType[]) { __VA_ARGS__ },                            \
+    })
 
 #endif /* DA_H */

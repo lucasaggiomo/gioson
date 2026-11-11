@@ -6,7 +6,7 @@ SRC_PATH = ./src
 INC_PATH = ./inc
 BUILD = ./build
 
-tests: $(BUILD)/test1 $(BUILD)/testsv
+tests: $(BUILD)/testjson $(BUILD)/testsv
 
 $(BUILD)/testjson: $(TST_PATH)/testjson.c $(SRC_PATH)/** $(INC_PATH)/**
 	@mkdir -p $(@D)

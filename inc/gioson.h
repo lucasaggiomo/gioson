@@ -8,7 +8,8 @@
 typedef enum {
     TYPE_UNKNOWN,
     TYPE_STRING,
-    TYPE_NUMBER,
+    TYPE_DOUBLE,
+    TYPE_INTEGER,
     TYPE_BOOLEAN,
     TYPE_NULL,
     TYPE_OBJECT,
@@ -30,7 +31,8 @@ void json_release(Json_Node *node);
 
 Type_Kind json_get_type(Json_Node *node);
 
-double json_get_number(Json_Node *node);
+double json_get_double(Json_Node *node);
+long long int json_get_integer(Json_Node *node);
 int json_get_boolean(Json_Node *node);
 String_View json_get_string(Json_Node *node);
 

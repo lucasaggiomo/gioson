@@ -117,9 +117,13 @@ Json_Node *json_parse(String_View *json) {
         case TOK_STRING:
             return new_string(&tok.data);
 
-        case TOK_NUMBER:
-            double num = atof(tok.data.data);     // uses atof for simplicity, assuming no errors
-            return new_number(num);
+        case TOK_DOUBLE:
+            double doubleNum = atof(tok.data.data);     // uses atof for simplicity, assuming no errors
+            return new_double(doubleNum);
+
+        case TOK_INTEGER:
+            long long int intNum = atoll(tok.data.data);     // uses atoll for simplicity, assuming no errors
+            return new_integer(intNum);
 
         case TOK_TRUE:
             return new_boolean(1);

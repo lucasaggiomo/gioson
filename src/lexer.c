@@ -3,6 +3,7 @@
 #include <ctype.h>
 #include <string.h>
 
+#include "da.h"
 #include "log.h"
 
 /* =============================== LEXER =============================== */
@@ -54,6 +55,28 @@ void tok_print(Token *tok) {
 void tok_print(Token *tok) { (void)tok; }
 #endif
 
+static inline int issign(int c) { return c == '-' || c == '+'; }
+static inline int isdot(int c) { return c == '.'; }
+static inline int issignordot(int c) { return issign(c) || isdot(c); }
+
+/// in regex, a floating number matches the pattern "[+-]?\d*\.?\d+"
+/// i.e.: optional sign (single) -> any digits (zero or more) -> optional dot -> many digits (one or more)
+/// NOTE: For simplicity, it's not yet supported standard notation with exponent 'e'.
+static const SV_Pattern DOUBLE_PATTERN = SV_PATTERN(
+    SVP_OPT(SVP_CHARS("+-")),       // sign
+    SVP_ANY(SVP_PRED(isdigit)),     // integer part
+    SVP_OPT(SVP_CHAR('.')),         // dot
+    SVP_MANY(SVP_PRED(isdigit))     // decimal part
+);
+
+// in regex, a number matches the pattern "[+-]?\d+"
+// i.e.: optional sign (single) -> many digits (one or more)
+/// NOTE: For simplicity, it's not yet supported standard notation with exponent 'e'.
+static const SV_Pattern INTEGER_PATTERN = SV_PATTERN(
+    SVP_OPT(SVP_CHARS("+-")),       // sign
+    SVP_MANY(SVP_PRED(isdigit))     // decimal part
+);
+
 Token lex_next_token(String_View *json) {
     sv_skip_spaces_left(json);
 
@@ -72,10 +95,16 @@ Token lex_next_token(String_View *json) {
         result = sv_chop_left_splitbydelim(json, '\"');     // discards last "
         kind = TOK_STRING;
 
-    } else if (isdigit(json->data[0])) {     // NUMBER  // TODO: handle numbers starting with '-' or '.'
-        // chops whole number
-        result = sv_chop_left_while(json, isdigit, SV_BOUND_KEEP);
-        kind = TOK_NUMBER;
+    } else if (isdigit(json->data[0]) || issignordot(json->data[0])) {     // DOUBLE | INTEGER
+        // tries to match one of the number patterns
+
+        SV_Patterns patterns = SV_PATTERNS(DOUBLE_PATTERN, INTEGER_PATTERN);
+        size_t patternIndex = sv_chop_left_pattern_any(json, patterns, &result);
+        require(patternIndex != SVP_NO_ONE_MATCHED, "Expected TOK_DOUBLE or TOK_INTEGER, but the patterns didn't match. Failed node of index %zu\n");
+
+        kind = (patternIndex == 0)
+            ? TOK_DOUBLE
+            : TOK_INTEGER;
 
     } else if (strncmp(json->data, "true", 4) == 0) {
         result = sv_chop_left(json, 4);

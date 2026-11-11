@@ -72,7 +72,7 @@ int main(int argc, char *argv[]) {
 
     require(type == TYPE_OBJECT, "Expected object type\n");
 
-    String_View key = SV_LITERAL("key3.key5[4][1]");
+    String_View key = SV_LITERAL("key3.key5[5].id");
     Json_Node *key_value = json_object_get_pattern(node, key);
     require(key_value != NULL, "'" SV_FORMAT "' not found!\n", SV_ARGS(&key));
 
@@ -80,9 +80,9 @@ int main(int argc, char *argv[]) {
     json_release(node);
 
     // now key_value should not have been deallocated
-    require(json_get_type(key_value) == TYPE_NUMBER, "Expected object type\n");
-    double number = json_get_number(key_value);
-    printf("key value is: %f\n", number);
+    require(json_get_type(key_value) == TYPE_INTEGER, "Expected object type\n");
+    long long int number = json_get_integer(key_value);
+    printf("key value is: %lld\n", number);
 
     // String_View key_content = json_get_string(key_value);
     // printf("key value is: " SV_FORMAT "\n", SV_ARGS(&key_content));

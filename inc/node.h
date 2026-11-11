@@ -10,16 +10,19 @@ typedef struct {
     Json_Node *value;
 } Json_Kvp;
 
-DA_DEFINE(Json_Node *) Json_Array;
+DA_DEFINE(Json_Node *)
+Json_Array;
 
-DA_DEFINE(Json_Kvp) Json_Object;
+DA_DEFINE(Json_Kvp)
+Json_Object;
 
 struct Json_Node {
     unsigned int refcount;
     Type_Kind kind;
 
     union {
-        double num;
+        double doubleNum;
+        long long int intNum;
         int boolean;
         String_View str;
         Json_Array array;
@@ -28,7 +31,8 @@ struct Json_Node {
 };
 
 Json_Node *new_string(String_View *str);
-Json_Node *new_number(double number);
+Json_Node *new_double(double number);
+Json_Node *new_integer(long long int number);
 Json_Node *new_boolean(int boolean);
 Json_Node *new_null();
 Json_Node *new_object();

@@ -12,7 +12,8 @@ typedef enum {
     TOK_COLON,            // :
     TOK_COMMA,            // ,
     TOK_STRING,
-    TOK_NUMBER,
+    TOK_DOUBLE,
+    TOK_INTEGER,
     TOK_TRUE,
     TOK_FALSE,
     TOK_NULL
@@ -49,4 +50,4 @@ Token lex_next_token(String_View *json);
  */
 Token lex_peek_token(String_View *json);
 
-#endif		// LEXER_H
+#endif     // LEXER_H

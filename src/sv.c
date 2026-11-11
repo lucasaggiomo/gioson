@@ -1,5 +1,8 @@
 #include "sv.h"
+#include "da.h"
 #include <ctype.h>
+#include <stdarg.h>
+#include <stdio.h>
 #include <string.h>
 
 #define MIN(a, b) ((a) <= (b) ? (a) : (b))
@@ -83,7 +86,7 @@ String_View sv_chop_right(String_View *sv, size_t count) {
 
 /* ------------------------------- INTERNAL HELPERS ------------------------------- */
 
-static inline String_View sv_chop_left_at(String_View *sv, size_t index, SV_Bound_Mode mode) {
+static inline String_View sv_chop_left_withmode(String_View *sv, size_t index, SV_Bound_Mode mode) {
     // chops everything if beyond count
     if (index >= sv->count) return sv_chop_left(sv, sv->count);
 
@@ -104,7 +107,7 @@ static inline String_View sv_chop_left_at(String_View *sv, size_t index, SV_Boun
     }
 }
 
-static inline String_View sv_chop_right_at(String_View *sv, size_t index, SV_Bound_Mode mode) {
+static inline String_View sv_chop_right_withmode(String_View *sv, size_t index, SV_Bound_Mode mode) {
     // chops everything if beyond count
     if (index >= sv->count) return sv_chop_right(sv, sv->count);
 
@@ -129,29 +132,117 @@ static inline String_View sv_chop_right_at(String_View *sv, size_t index, SV_Bou
 /* ------------------------------- LEFT ------------------------------- */
 
 String_View sv_chop_left_delim(String_View *sv, char delim, SV_Bound_Mode mode) {
-    return sv_chop_left_at(sv, sv_find_left_delim(*sv, delim), mode);
+    return sv_chop_left_withmode(sv, sv_find_left_delim(*sv, delim), mode);
 }
 
 String_View sv_chop_left_until(String_View *sv, SV_Predicate pred, SV_Bound_Mode mode) {
-    return sv_chop_left_at(sv, sv_find_left_until(*sv, pred), mode);
+    return sv_chop_left_withmode(sv, sv_find_left_until(*sv, pred), mode);
 }
 
 String_View sv_chop_left_while(String_View *sv, SV_Predicate pred, SV_Bound_Mode mode) {
-    return sv_chop_left_at(sv, sv_find_left_while(*sv, pred), mode);
+    return sv_chop_left_withmode(sv, sv_find_left_while(*sv, pred), mode);
 }
 
 /* ------------------------------- RIGHT ------------------------------- */
 
 String_View sv_chop_right_delim(String_View *sv, char delim, SV_Bound_Mode mode) {
-    return sv_chop_right_at(sv, sv_find_right_delim(*sv, delim), mode);
+    return sv_chop_right_withmode(sv, sv_find_right_delim(*sv, delim), mode);
 }
 
 String_View sv_chop_right_until(String_View *sv, SV_Predicate pred, SV_Bound_Mode mode) {
-    return sv_chop_right_at(sv, sv_find_right_until(*sv, pred), mode);
+    return sv_chop_right_withmode(sv, sv_find_right_until(*sv, pred), mode);
 }
 
 String_View sv_chop_right_while(String_View *sv, SV_Predicate pred, SV_Bound_Mode mode) {
-    return sv_chop_right_at(sv, sv_find_right_while(*sv, pred), mode);
+    return sv_chop_right_withmode(sv, sv_find_right_while(*sv, pred), mode);
+}
+
+/* ------------------------------- PATTERN ------------------------------- */
+
+// clang-format off
+
+/** Helper that returns the result of the matcher 'm' evaluated on given character 'c'. */
+static inline int sv_matcher_matches(SV_Matcher m, char c) {
+    switch (m.kind) {
+        case SV_MATCH_CHAR:     return c == m.as.character;
+        case SV_MATCH_CHARS:    return sv_find_left_delim(m.as.chars, c) != m.as.chars.count;
+        case SV_MATCH_PRED:     return m.as.predicate((unsigned char)c) != 0;
+        case SV_MATCH_NOT_PRED: return m.as.predicate((unsigned char)c) == 0;
+        default: return 0;
+    }
+}
+// clang-format on
+
+size_t sv_chop_left_pattern(String_View *sv, SV_Pattern pattern, String_View *out) {
+    size_t cursor = 0;
+
+    // for each SV_Pattern_Node, tries to greedly match until node->max
+    for (size_t i = 0; i < pattern.count; ++i) {
+        const SV_Pattern_Node *node = &pattern.items[i];
+
+        // matches at most node->max characters, breaking if sv->count is reached or the match fails
+        size_t matched = 0;
+        while (cursor < sv->count && matched < node->max) {
+            // tries to match
+            if (!sv_matcher_matches(node->matcher, sv->data[cursor])) {
+                break;
+            }
+            ++cursor;
+            ++matched;
+        }
+
+        // match failed, returns the index of the failed SV_Pattern_Node
+        if (matched < node->min) return i;
+    }
+
+    // chops cursor characters from the left of 'sv'
+    *out = sv_chop_left(sv, cursor);
+    return pattern.count;
+}
+
+size_t sv_chop_right_pattern(String_View *sv, SV_Pattern pattern, String_View *out) {
+    size_t cursor = 0;
+
+    // for each SV_Pattern_Node, tries to greedly match until node->max
+    for (size_t i = 0; i < pattern.count; ++i) {
+        const SV_Pattern_Node *node = &pattern.items[i];
+
+        // matches at most node->max characters, breaking if sv->count is reached or the match fails
+        size_t matched = 0;
+        while (cursor < sv->count && matched < node->max) {
+            // tries to match
+            if (!sv_matcher_matches(node->matcher, sv->data[sv->count - 1 - cursor])) {
+                break;
+            }
+            ++cursor;
+            ++matched;
+        }
+
+        // match failed, returns the index of the failed SV_Pattern_Node
+        if (matched < node->min) return i;
+    }
+
+    // chops cursor characters from the right of 'sv'
+    *out = sv_chop_right(sv, sv->count - 1 - cursor);
+    return sv->count;
+}
+
+size_t sv_chop_left_pattern_any(String_View *sv, SV_Patterns patterns, String_View *out) {
+    for (size_t i = 0; i < patterns.count; ++i) {
+        size_t succeededNodes = sv_chop_left_pattern(sv, patterns.items[i], out);
+        if (succeededNodes == patterns.items[i].count)
+            return i;
+    }
+    return SVP_NO_ONE_MATCHED;
+}
+
+size_t sv_chop_right_pattern_any(String_View *sv, SV_Patterns patterns, String_View *out) {
+    for (size_t i = 0; i < patterns.count; ++i) {
+        size_t succeededNodes = sv_chop_right_pattern(sv, patterns.items[i], out);
+        if (succeededNodes == patterns.items[i].count)
+            return i;
+    }
+    return SVP_NO_ONE_MATCHED;
 }
 
 /* =============================== SKIP =============================== */
@@ -209,25 +300,6 @@ void sv_skip_spaces_right(String_View *sv) {
     sv_skip_right_while(sv, isspace);
 }
 
-int sv_strcmp(String_View sv1, String_View sv2) {
-    if (sv1.count > sv2.count)
-        return 1;
-    else if (sv1.count < sv2.count)
-        return -1;
-
-    return strncmp(sv1.data, sv2.data, sv1.count);
-}
-
-int sv_strcmp_cstr(String_View sv, const char *cstr) {
-    size_t len = (size_t)strlen(cstr);
-    if (sv.count > len)
-        return 1;
-    else if (sv.count < len)
-        return -1;
-
-    return strncmp(sv.data, cstr, len);
-}
-
 String_View sv_slice_left(String_View sv, size_t count) {
     count = MIN(count, sv.count);
     return SV_LEN(sv.data, count);
@@ -250,4 +322,56 @@ String_View sv_slice(String_View sv, size_t offset, size_t count) {
         .data = sv.data + offset,
         .count = count
     };
+}
+
+/* =============================== STRING OPERATIONS =============================== */
+
+String sv_strcat(String_View sv1, String_View sv2) {
+    String output = { 0 };
+    da_init(&output);
+    da_append_view(&output, &sv1);
+    da_append_view(&output, &sv2);
+    return output;
+}
+
+String sv_strcat_cstr(String_View sv1, const char *cstr) {
+    String output = { 0 };
+    da_init(&output);
+    da_append_view(&output, &sv1);
+    da_append_n(&output, cstr, strlen(cstr));
+    return output;
+}
+
+String sv_strcat_many(size_t argc, ...) {
+    String output = { 0 };
+    da_init(&output);
+
+    va_list ap;
+    va_start(ap, argc);
+    for (size_t i = 0; i < argc; ++i) {
+        String_View curr = va_arg(ap, String_View);
+        da_append_view(&output, &curr);
+    }
+    va_end(ap);
+
+    return output;
+}
+
+int sv_strcmp(String_View sv1, String_View sv2) {
+    if (sv1.count > sv2.count)
+        return 1;
+    else if (sv1.count < sv2.count)
+        return -1;
+
+    return strncmp(sv1.data, sv2.data, sv1.count);
+}
+
+int sv_strcmp_cstr(String_View sv, const char *cstr) {
+    size_t len = (size_t)strlen(cstr);
+    if (sv.count > len)
+        return 1;
+    else if (sv.count < len)
+        return -1;
+
+    return strncmp(sv.data, cstr, len);
 }
